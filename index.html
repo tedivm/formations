@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <title>Game Testing</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.6.1/randomColor.js'></script>
+    <script src="libs/astar.js"></script>
+    <script src="libs/noise.js"></script>
+    <script src="src/game.js"></script>
+
+    <link rel="shortcut icon" href="favicon.ico">
+    <style type="text/css">
+      #container {
+      	text-align: center;
+        width: 100%;
+        height: 100%;
+        margin: 0px auto;
+
+      }
+      #gameboard {
+        border: 1px solid black;
+      }
+    </style>
+
+  </head>
+  <body style="background-color:black;color:white">
+    <div id="container">
+      <canvas id="gameboard">
+        Canvas is required.
+      </canvas>
+    </div>
+  </body>
+
+  <script>
+
+    const elementSize = 6
+    const game_size = 800
+    const tickRate = 20
+    const population_density = 0.04
+    const max_population = 600
+
+    const canvas = document.getElementById("gameboard");
+    const ctx = canvas.getContext('2d');
+
+    ctx.canvas.width = window.innerWidth * 0.98
+    ctx.canvas.height = window.innerHeight * 0.98
+
+    const columns = Math.floor(ctx.canvas.width / elementSize)
+    const rows = Math.floor(ctx.canvas.height / elementSize)
+    const creepCount = Math.min((rows * columns) * population_density, max_population)
+
+    const Game = new GameEngine(canvas, {
+      columns: columns,
+      rows: rows
+    })
+
+    const creeps = []
+    for (let i = 0; i < creepCount; i++) {
+      const pos = Game.rooms["sim"].getRandomWalkablePosition()
+      const creep = new Creep(Game, pos)
+      creep.color = randomColor({luminosity: 'dark'})
+      creeps.push(creep)
+      Game.addGameObject(creep)
+    }
+
+    Game.registerScript(function (scriptId, Game, Memory) {
+      if (!Memory.count) {
+        Memory.count = 1
+      } else {
+        Memory.count++
+      }
+      console.log(`Script ${scriptId} run #${Memory.count}`)
+
+      // Give creeps random destinations, assign them new ones once they reach it.
+      for (const creep of creeps) {
+        if (!creep.memory.nextPos || creep.pos.isEqualTo(creep.memory.nextPos)) {
+          delete creep.memory.nextPos
+          let nextPos = Game.rooms["sim"].getRandomWalkablePosition()
+          if (nextPos) {
+            let path = creep.room.findPath(creep.pos, nextPos)
+            if (!!path && path.length > 0) {
+              creep.memory.nextPos = nextPos
+            }
+          }
+        }
+        if (creep.memory.nextPos) {
+          creep.moveTo(creep.memory.nextPos)
+        }
+      }
+    })
+
+    Game.draw()
+    Game.run({"tickRate":tickRate})
+
+
+  </script>
+
+</html>
