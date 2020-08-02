@@ -138,10 +138,13 @@ class GameEngine {
     }
 
     while (Object.keys(this.intents).length > 0) {
+      // Pop a random intent off the queue.
       const IntendIdList = Object.keys(this.intents)
       const intentId = IntendIdList[Math.floor(Math.random() * IntendIdList.length)];
       const intent = this.intents[intentId]
       delete this.intents[intentId]
+
+
       try {
         intent.resolve(this, this.intents)
       } catch (error) {
