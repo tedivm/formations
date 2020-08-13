@@ -101,13 +101,12 @@ class GameEngine {
     this.gameObjects = {}
     this.height = this.canvas.offsetHeight
     this.width = this.canvas.offsetWidth
-    this.gridElementHeight = Math.floor(this.height / this.opts.rows)
-    this.gridElementWidth = Math.floor(this.width / this.opts.columns)
     this.rooms = {
       "sim": new Room(this, this.opts.columns, this.opts.rows)
     }
     this.scripts = []
     this.scriptMemory = {}
+    this.worldview = new WorldView(canvas, this)
 
 
     this.paths = []
@@ -179,90 +178,13 @@ class GameEngine {
       console.time("tick")
       const start = Date.now()
       this.tick()
-      this.draw()
+      this.worldview.draw()
       const elapsedTime = Date.now() - start
       const pauseTime = Math.max(3, opts.tickRate - elapsedTime)
       await sleep(pauseTime)
       console.timeEnd("tick")
     }
   }
-
-  draw() {
-    const ctx = this.canvas.getContext('2d')
-
-    // Set Background
-    ctx.save()
-    ctx.clearRect(0, 0, this.width, this.height)
-    if (this.opts.backgroundColor) {
-      ctx.fillStyle = this.opts.backgroundColor
-      ctx.fillRect(0, 0, this.width, this.height)
-    }
-    ctx.restore()
-
-    // Set Terrain
-    for (var x = 0; x < this.opts.columns; x++) {
-      let row = ""
-      for (var y = 0; y < this.opts.rows; y++) {
-        //const type = getTerrainAt(x, y)
-        const type = this.rooms["sim"].grid[x][y]
-        row += type
-        ctx.save()
-        ctx.fillStyle = TERRAIN_COLORS[type]
-        ctx.fillRect(
-          x * this.gridElementWidth,
-          y * this.gridElementHeight,
-          this.gridElementWidth+1,
-          this.gridElementHeight+1
-        )
-        ctx.restore()
-      }
-    }
-
-
-    // Draw Paths
-    for (const path of this.paths) {
-      this.drawPath(path)
-    }
-
-    // Draw Objects
-    for (const gameObject of Object.values(this.gameObjects)) {
-      const pos = gameObject.getPosition()
-      this.drawCircleInGrid(pos.x, pos.y, gameObject.getColor())
-    }
-  }
-
-  drawCircleInGrid(x, y, color) {
-    const ctx = this.canvas.getContext('2d')
-    ctx.save()
-    let radius = (this.gridElementWidth/2)*0.97
-    if (radius < 1) {
-      radius = 1
-    }
-
-    const centerX = (x * this.gridElementWidth) + (this.gridElementWidth/2)
-    const centerY = (y * this.gridElementHeight) + (this.gridElementHeight/2)
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // Give it a white border if there's enough space to
-    if (Math.floor(this.gridElementWidth) > 4 && Math.floor(this.gridElementHeight) > 4) {
-      ctx.lineWidth = this.gridElementWidth > 10 ? 2 : 1;
-      ctx.strokeStyle = '#a2a2a2';
-      ctx.stroke();
-    }
-
-    ctx.restore()
-  }
-
-  drawPath(path) {
-    for (const piece of path) {
-      this.drawCircleInGrid(piece.x, piece.y, "red")
-    }
-  }
-
 }
 
 
@@ -276,12 +198,13 @@ class WorldView {
     // Initialize to show the entire world.
     this.rows = this.game.opts.rows
     this.columns = this.game.opts.columns
+    this.gridElementHeight = Math.floor(this.height / this.rows)
+    this.gridElementWidth = Math.floor(this.width / this.columns)
+
   }
 
   draw() {
     const ctx = this.canvas.getContext('2d')
-    this.gridElementHeight = this.height / this.rows
-    this.gridElementWidth = this.width / this.columns
 
     // Set Background
     ctx.save()
@@ -291,9 +214,9 @@ class WorldView {
     ctx.restore()
 
     // Set Terrain
-    for (var x = 0; x < this.opts.columns; x++) {
+    for (var x = 0; x < this.columns; x++) {
       let row = ""
-      for (var y = 0; y < this.opts.rows; y++) {
+      for (var y = 0; y < this.rows; y++) {
         //const type = getTerrainAt(x, y)
         const type = this.game.rooms["sim"].grid[x][y]
         row += type
@@ -310,12 +233,12 @@ class WorldView {
     }
 
     // Draw Paths
-    for (const path of this.paths) {
+    for (const path of this.game.paths) {
       this.drawPath(path)
     }
 
     // Draw Objects
-    for (const gameObject of Object.values(this.gameObjects)) {
+    for (const gameObject of Object.values(this.game.gameObjects)) {
       const pos = gameObject.getPosition()
       this.drawCircleInGrid(pos.x, pos.y, gameObject.getColor())
     }
